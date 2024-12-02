@@ -1,48 +1,66 @@
-#include "filters.h"
+#include "include/filters.h"
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <iostream>
+#include <stdexcept>
+#include <filesystem> // C++17 for creating directories
 
-// Function to extract filter responses for an image
-std::vector<std::vector<float>> extractFilterResponses(const cv::Mat& image) {
-    // Ensure the input image is valid
+void saveFilterResponseImage(const cv::Mat& response, const std::string& outputPath, int filterIdx, const std::string& channel) {
+    // Normalize response for better visualization
+    cv::Mat normalizedResponse;
+    cv::normalize(response, normalizedResponse, 0, 255, cv::NORM_MINMAX, CV_8U);
+
+    // Construct file name
+    std::string filename = outputPath + "/filter_response_" + std::to_string(filterIdx) + "_" + channel + ".jpg";
+
+    // Save the image
+    if (!cv::imwrite(filename, normalizedResponse)) {
+        throw std::runtime_error("Failed to save filter response image: " + filename);
+    }
+
+    std::cout << "Saved filter response: " << filename << std::endl;
+}
+
+
+void extractAndSaveFilterResponses(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath) {
     if (image.empty()) {
         throw std::invalid_argument("Input image is empty!");
     }
 
-    // Convert the image to CIE Lab color space for better feature extraction
+    // Create output directory if it doesn't exist
+    std::filesystem::create_directories(outputPath);
+
+    // Convert image to CIE Lab color space
     cv::Mat labImage;
     cv::cvtColor(image, labImage, cv::COLOR_BGR2Lab);
 
-    // Prepare to store the filter responses
-    int rows = labImage.rows;
-    int cols = labImage.cols;
-    std::vector<std::vector<float>> featureResponses(rows * cols);
+    // Split the Lab channels
+    std::vector<cv::Mat> labChannels(3);
+    cv::split(labImage, labChannels);
+    const cv::Mat& L_channel = labChannels[0];
+    const cv::Mat& a_channel = labChannels[1];
+    const cv::Mat& b_channel = labChannels[2];
 
-    // Define the filter kernels (adjust parameters as needed)
-    cv::Mat gaussian, laplacian;
+    // Filter index
+    int filterIdx = 1;
 
-    // Apply Gaussian blur on each channel of the Lab image
-    for (int channel = 0; channel < 3; ++channel) {
-        cv::GaussianBlur(labImage, gaussian, cv::Size(3, 3), 1.0);
+    // Iterate over filters
+    for (const auto& filter : filterBank) {
+        // Process each channel
+        cv::Mat response_L, response_a, response_b;
 
-        // Apply Laplacian filter
-        cv::Mat singleChannel = labImage.clone();
-        cv::extractChannel(labImage, singleChannel, channel); // Extract the specific channel
-        cv::Laplacian(singleChannel, laplacian, CV_32F);
+        // Apply filter to each channel
+        cv::filter2D(L_channel, response_L, CV_32F, filter);
+        saveFilterResponseImage(response_L, outputPath, filterIdx, "L");
 
-        // Iterate over pixels to store filter responses
-        for (int row = 0; row < rows; ++row) {
-            for (int col = 0; col < cols; ++col) {
-                int idx = row * cols + col; // Flattened index
-                if (featureResponses[idx].empty()) {
-                    featureResponses[idx].resize(6); // Three filters * 2
-                }
-                // Add Gaussian and Laplacian filter responses for this channel
-                featureResponses[idx][channel * 2] = gaussian.at<cv::Vec3b>(row, col)[channel];
-                featureResponses[idx][channel * 2 + 1] = laplacian.at<float>(row, col);
-            }
-        }
+        cv::filter2D(a_channel, response_a, CV_32F, filter);
+        saveFilterResponseImage(response_a, outputPath, filterIdx, "a");
+
+        cv::filter2D(b_channel, response_b, CV_32F, filter);
+        saveFilterResponseImage(response_b, outputPath, filterIdx, "b");
+
+        // Increment filter index
+        ++filterIdx;
     }
-
-    return featureResponses;
 }
+
