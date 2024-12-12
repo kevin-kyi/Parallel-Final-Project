@@ -1,10 +1,11 @@
-#include "include/filters.h"
-#include <opencv2/opencv.hpp>
-#include <iostream>
-#include <vector>
+// #include "include/filters.h"
+// #include <opencv2/opencv.hpp>
+// #include <iostream>
+// #include <vector>
+// #include <filesystem>
 
 
-// MAIN FUNCTION TO TEST FILTER EXTRACTION
+// // MAIN FUNCTION TO TEST FILTER EXTRACTION
 
 // std::vector<cv::Mat> createFilterBank();
 
@@ -35,6 +36,98 @@
 
 //     return 0;
 // }
+#include "include/filters.h"
+#include "include/createFilterBank.h"
+#include <opencv2/opencv.hpp>
+#include <iostream>
+#include <vector>
+#include <filesystem> // C++17 for iterating over directory contents
+#include <chrono>     // For timing
+#include <fstream>
+#include <omp.h>
+
+// MAIN FUNCTION TO TEST FILTER EXTRACTION
+
+std::vector<cv::Mat> createFilterBank();
+
+int main() {
+
+    // Define the directory containing images and results output folder
+    std::string inputDir = "../data/Testing/test_swimming_pool"; //change dir name
+    std::string resultsDir = "../results/parallel/test_swimming_pool"; //change dir name
+    std::string csvPath = "../results/parallel/performance_data/performance_swimming_pool.csv"; //change csv name
+
+    // Create the filter bank
+    std::vector<cv::Mat> filterBank = createFilterBank();
+
+    // Open the CSV file for writing
+    std::ofstream csvFile(csvPath);
+    if (!csvFile.is_open()) {
+        std::cerr << "Error: Could not open CSV file for writing: " << csvPath << std::endl;
+        return -1;
+    }
+
+    // Write the header for the CSV
+    csvFile << "test_swimming_pool\n"; //change name
+    csvFile << "Image,Time (seconds)\n";
+
+    // Measure the total directory processing time
+    auto totalStart = std::chrono::high_resolution_clock::now();
+
+    // Iterate over all files in the input directory
+    for (const auto& entry : std::__fs::filesystem::directory_iterator(inputDir)) {
+        const std::string imagePath = entry.path().string();
+
+        // Ensure the file has a .jpg extension (case-insensitive check)
+        if (entry.path().extension() == ".jpg" || entry.path().extension() == ".JPG") {
+            // std::cout << "Processing image: " << imagePath << std::endl;
+
+            // Measure the time for processing a single image
+            auto imageStart = std::chrono::high_resolution_clock::now();
+
+            // Load the image
+            cv::Mat image = cv::imread(imagePath);
+            if (image.empty()) {
+                std::cerr << "Error: Could not open image at " << imagePath << std::endl;
+                continue; // Skip to the next file
+            }
+
+            // Define the output path for this image
+            std::string imageResultsDir = resultsDir + "/" + entry.path().stem().string();
+
+            // Apply filters and save the responses
+            try {
+                extractAndSaveFilterResponses(image, filterBank, imageResultsDir);
+            } catch (const std::exception& e) {
+                std::cerr << "Error processing image " << imagePath << ": " << e.what() << std::endl;
+                continue; // Skip to the next file
+            }
+
+            // Measure and log the time for the current image
+            auto imageEnd = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> imageDuration = imageEnd - imageStart;
+            std::cout << "Time taken for " << imagePath << ": " << imageDuration.count() << " seconds" << std::endl;
+            // Write the result to the CSV file
+            csvFile << entry.path().filename().string() << "," << imageDuration.count() << "\n";
+        } else {
+            std::cout << "Skipping non-image file: " << imagePath << std::endl;
+        }
+    }
+
+    // Measure and log the total processing time
+    auto totalEnd = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> totalDuration = totalEnd - totalStart;
+    std::cout << "Total time taken for directory: " << totalDuration.count() << " seconds" << std::endl;
+
+    // Close the CSV file
+    
+    csvFile << "Total," << totalDuration.count() << "\n";
+    csvFile.close();
+    std::cout << "Performance times written to " << csvPath << std::endl;
+
+    return 0;
+}
+
 
 
 
@@ -67,143 +160,3 @@
 
 //     return 0;
 // }
-
-
-
-
-// TESTING MAIN FOR CREATING TRAIN/TEST CSV
-// #include "include/create_csv.h"
-// #include "include/create_dictionary.h"
-
-
-// int main() {
-//     std::string train_dir = "data/Training";
-//     std::string test_dir = "data/Testing";
-//     std::string output_csv = "traintest.csv";
-
-//     create_csv(train_dir, test_dir, output_csv);
-
-
-
-//     return 0;
-// }
-
-
-#include "include/create_dictionary.h"
-#include "include/getHarrisPoints.h"
-#include "include/filters.h"
-
-#include <fstream>
-
-#include "include/visual_words.h"
-#include <yaml-cpp/yaml.h>
-
-
-// int main() {
-//     std::string imagePath = "data/airport_image1.jpg";
-
-//     // Load the input image
-//     cv::Mat image = cv::imread(imagePath);
-
-    
-//     std::vector<cv::Mat> filterBank = createFilterBank();
-
-   
-
-
-
-
-
-//     YAML::Node config = YAML::LoadFile("dictionary.yml");
-
-//     // Extract matrix dimensions and data from YAML
-//     int rows = config["dictionary"]["rows"].as<int>();
-//     int cols = config["dictionary"]["cols"].as<int>();
-//     std::vector<double> data = config["dictionary"]["data"].as<std::vector<double>>();
-//     // Create a cv::Mat from the extracted data
-//     cv::Mat dictionary = cv::Mat(rows, cols, CV_64FC1, data.data()).t();
-
-
-
-//     std::cout << "Here is dict Rows: " << rows << std::endl;
-//     std::cout << "Here is dict Cols: " << cols << std::endl;
-
-
-//     cv::Mat filterResponses = extractFilterResponses(image, filterBank);
-
-//     // Reshape filter responses to a 2D matrix where each row is a feature vector
-//     int numPixels = filterResponses.rows * filterResponses.cols;
-//     int numChannels = filterResponses.channels();
-//     filterResponses = filterResponses.reshape(numPixels, numChannels);
-
-//     // Ensure data type consistency
-//     filterResponses.convertTo(filterResponses, dictionary.type());
-
-//     // std::cout << "Filter Response Row: " << filterResponses.row(0) << std::endl;
-//     std::cout << "Filter Response Row: " << filterResponses.row(0).size() << std::endl;
-
-
-
-
-
-//     cv::Mat wordMap = getVisualWords(image, dictionary, filterBank);
-
-//     // // Reconstruct the image using the wordMap (optional)
-//     // // ... (implementation for reconstructing the image)
-
-//     // // Display or save the reconstructed image
-//     // cv::imshow("Reconstructed Image", wordMap);
-//     // cv::waitKey(0);
-//     // cv::imwrite("reconstructed_image.jpg", wordMap);
-
-//     // return 0;
-// }
-
-
-
-
-int main() {
-    // Read the CSV file
-    std::ifstream infile("traintest.csv");
-    if (!infile.is_open()) {
-        std::cerr << "Cannot open traintest.csv\n";
-        return -1;
-    }
-
-    std::vector<std::string> image_paths;
-    std::string line;
-    std::getline(infile, line); // Skip the header line
-
-    while (std::getline(infile, line)) {
-        std::istringstream ss(line);
-        std::string filename, label, split;
-        std::getline(ss, filename, ',');
-        std::getline(ss, label, ',');
-        std::getline(ss, split, ',');
-
-        // Construct the full image path based on the split
-
-        std::string category = (split == "train" ? "Training/" : "Testing/");
-
-        // std::string full_path = "data/" + category + filename;
-        std::string full_path = category + filename;
-
-        image_paths.push_back(full_path);
-    }
-
-    // Parameters for dictionary creation
-    int alpha = 10;  // Number of points per image
-    int K = 500;     // Number of visual words
-    std::string method = "Harris";
-
-    // Create the dictionary
-    cv::Mat dictionary = get_dictionary(image_paths, alpha, K, method);
-
-    // Save the dictionary
-    save_dictionary(dictionary, "dictionary.yml");
-
-    return 0;
-}
-
-
-

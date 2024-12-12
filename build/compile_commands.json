@@ -1,0 +1,20 @@
+[
+{
+  "directory": "/Users/derekkim/Parallel-Final-Project/build",
+  "command": "/usr/local/opt/llvm@14/bin/clang++ -D__NO_FLOAT16__ -isystem /usr/local/Cellar/opencv/4.10.0_15/include/opencv4  -mmacosx-version-min=10.15 -D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=10.15 -o CMakeFiles/main.dir/src/main.cpp.o -c /Users/derekkim/Parallel-Final-Project/src/main.cpp",
+  "file": "/Users/derekkim/Parallel-Final-Project/src/main.cpp",
+  "output": "CMakeFiles/main.dir/src/main.cpp.o"
+},
+{
+  "directory": "/Users/derekkim/Parallel-Final-Project/build",
+  "command": "/usr/local/opt/llvm@14/bin/clang++ -D__NO_FLOAT16__ -isystem /usr/local/Cellar/opencv/4.10.0_15/include/opencv4  -mmacosx-version-min=10.15 -D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=10.15 -o CMakeFiles/main.dir/src/filters.cpp.o -c /Users/derekkim/Parallel-Final-Project/src/filters.cpp",
+  "file": "/Users/derekkim/Parallel-Final-Project/src/filters.cpp",
+  "output": "CMakeFiles/main.dir/src/filters.cpp.o"
+},
+{
+  "directory": "/Users/derekkim/Parallel-Final-Project/build",
+  "command": "/usr/local/opt/llvm@14/bin/clang++ -D__NO_FLOAT16__ -isystem /usr/local/Cellar/opencv/4.10.0_15/include/opencv4  -mmacosx-version-min=10.15 -D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=10.15 -o CMakeFiles/main.dir/src/createFilterBank.cpp.o -c /Users/derekkim/Parallel-Final-Project/src/createFilterBank.cpp",
+  "file": "/Users/derekkim/Parallel-Final-Project/src/createFilterBank.cpp",
+  "output": "CMakeFiles/main.dir/src/createFilterBank.cpp.o"
+}
+]
