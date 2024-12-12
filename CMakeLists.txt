@@ -17,7 +17,7 @@ endif()
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 # Specify the executable and source files
-add_executable(main src/main.cpp src/filters.cpp src/createFilterBank.cpp)
+add_executable(main src/main.cpp src/filters.cu src/createFilterBank.cpp)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -34,6 +34,8 @@ set(CMAKE_OSX_SYSROOT "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
 add_definitions(-D__NO_FLOAT16__)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES")
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_60 -std=c++17")
+
 
 # Link libraries in a unified command
 target_link_libraries(main PUBLIC ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
