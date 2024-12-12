@@ -1,9 +1,100 @@
-#include "include/filters.h"
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <iostream>
 #include <stdexcept>
 #include <filesystem> // C++17 for creating directories
+
+#include "include/filters.h"
+
+
+
+// cv::Mat extractFilterResponses(const cv::Mat& image, const std::vector<cv::Mat>& filterBank) {
+//     // Convert image to Lab color space
+//     cv::Mat labImage;
+//     cv::cvtColor(image, labImage, cv::COLOR_BGR2Lab);
+
+//     // Split the Lab channels
+//     std::vector<cv::Mat> labChannels(3);
+//     cv::split(labImage, labChannels);
+//     const cv::Mat& L_channel = labChannels[0];
+//     const cv::Mat& a_channel = labChannels[1];
+//     const cv::Mat& b_channel = labChannels[2];
+
+//     // Create a vector to store filter responses
+//     std::vector<cv::Mat> filterResponses;
+
+//     // Iterate over filters and channels
+//     for (const auto& filter : filterBank) {
+//         cv::Mat response_L, response_a, response_b;
+
+//         // Apply filter to each channel
+//         cv::filter2D(L_channel, response_L, CV_32F, filter);
+//         cv::filter2D(a_channel, response_a, CV_32F, filter);
+//         cv::filter2D(b_channel, response_b, CV_32F, filter);
+
+//         // Concatenate the responses for the current filter
+//         std::vector<cv::Mat> filterResponseChannels = {response_L, response_a, response_b};
+//         cv::Mat filterResponse;
+//         cv::merge(filterResponseChannels, filterResponse);
+
+//         // Add the filter response to the overall response vector
+//         filterResponses.push_back(filterResponse);
+//     }
+
+//     // Concatenate all filter responses along the depth dimension
+//     cv::Mat allResponses;
+//     cv::merge(filterResponses, allResponses);
+
+//     return allResponses;
+// }
+
+
+cv::Mat extractFilterResponses(const cv::Mat& image, const std::vector<cv::Mat>& filterBank) {
+    // Convert image to Lab color space
+    cv::Mat labImage;
+    cv::cvtColor(image, labImage, cv::COLOR_BGR2Lab);
+
+    // Split the Lab channels
+    std::vector<cv::Mat> labChannels(3);
+    cv::split(labImage, labChannels);
+
+    // Create a vector to store filter responses for each pixel
+    std::vector<cv::Mat> filterResponses;
+
+    cv::Mat L_channel, a_channel, b_channel;
+
+    // Iterate over filters and channels
+    for (const auto& filter : filterBank) {
+        cv::Mat response_L, response_a, response_b;
+
+        L_channel = labChannels[0];
+        a_channel = labChannels[1];
+        b_channel = labChannels[2];
+
+        // Apply filter to each channel
+        cv::filter2D(L_channel, response_L, CV_32F, filter);
+        cv::filter2D(a_channel, response_a, CV_32F, filter);
+        cv::filter2D(b_channel, response_b, CV_32F, filter);
+
+        // Concatenate responses for the current pixel into a single row
+        std::vector<float> pixelResponse = {response_L.at<float>(0, 0), response_a.at<float>(0, 0), response_b.at<float>(0, 0)};
+        cv::Mat pixelResponseMat = cv::Mat(1, pixelResponse.size(), CV_64FC1, &pixelResponse[0]); // Ensure 64FC1 data type
+        filterResponses.push_back(pixelResponseMat);
+    }
+
+    // Concatenate all filter responses along the vertical dimension
+    cv::Mat allResponses;
+    cv::vconcat(filterResponses, allResponses);
+
+    return allResponses;
+}
+
+
+
+
+
+
+
 
 void saveFilterResponseImage(const cv::Mat& response, const std::string& outputPath, int filterIdx, const std::string& channel) {
     // Normalize response for better visualization
