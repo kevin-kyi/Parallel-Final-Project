@@ -7,11 +7,11 @@
 #include "include/filters.h"
 
 // Sequential filter implementation
-void extractFilterResponsesSequential(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath) {
+std::vector<cv::Mat> extractFilterResponsesSequential(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath) {
     if (image.empty()) {
         throw std::invalid_argument("Input image is empty!");
     }
-
+    
     // Create output directory if it doesn't exist
     std::filesystem::create_directories(outputPath);
 
@@ -26,6 +26,8 @@ void extractFilterResponsesSequential(const cv::Mat& image, const std::vector<cv
     const cv::Mat& a_channel = labChannels[1];
     const cv::Mat& b_channel = labChannels[2];
 
+    std::vector<cv::Mat> filterResponses;
+
     // Filter index
     int filterIdx = 1;
 
@@ -35,19 +37,23 @@ void extractFilterResponsesSequential(const cv::Mat& image, const std::vector<cv
 
         cv::filter2D(L_channel, response_L, CV_32F, filter);
         saveFilterResponseImage(response_L, outputPath, filterIdx, "L");
+        filterResponses.push_back(response_L);
 
         cv::filter2D(a_channel, response_a, CV_32F, filter);
         saveFilterResponseImage(response_a, outputPath, filterIdx, "a");
+        filterResponses.push_back(response_a);
 
         cv::filter2D(b_channel, response_b, CV_32F, filter);
         saveFilterResponseImage(response_b, outputPath, filterIdx, "b");
+        filterResponses.push_back(response_b);
 
         ++filterIdx;
     }
+    return filterResponses;
 }
 
 // OpenMP filter implementation
-void extractFilterResponsesOpenMP(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath) {
+std::vector<cv::Mat> extractFilterResponsesOpenMP(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath) {
     if (image.empty()) {
         throw std::invalid_argument("Input image is empty!");
     }
@@ -63,6 +69,9 @@ void extractFilterResponsesOpenMP(const cv::Mat& image, const std::vector<cv::Ma
     const cv::Mat& a_channel = labChannels[1];
     const cv::Mat& b_channel = labChannels[2];
 
+    int totalResponses = filterBank.size()*3;
+    std::vector<cv::Mat> filterResponses(totalResponses);
+
     #pragma omp parallel for
     for (int filterIdx = 0; filterIdx < filterBank.size(); ++filterIdx) {
         const auto& filter = filterBank[filterIdx];
@@ -72,12 +81,17 @@ void extractFilterResponsesOpenMP(const cv::Mat& image, const std::vector<cv::Ma
 
             cv::filter2D(L_channel, response_L, CV_32F, filter);
             saveFilterResponseImage(response_L, outputPath, filterIdx + 1, "L");
+            filterResponses[filterIdx * 3 + 0] = response_L;
 
             cv::filter2D(a_channel, response_a, CV_32F, filter);
             saveFilterResponseImage(response_a, outputPath, filterIdx + 1, "a");
+            filterResponses[filterIdx * 3 + 1] = response_a;
 
             cv::filter2D(b_channel, response_b, CV_32F, filter);
             saveFilterResponseImage(response_b, outputPath, filterIdx + 1, "b");
+            filterResponses[filterIdx * 3 + 2] = response_b;
+            
+
         } catch (const std::exception& e) {
             #pragma omp critical
             {
@@ -85,6 +99,7 @@ void extractFilterResponsesOpenMP(const cv::Mat& image, const std::vector<cv::Ma
             }
         }
     }
+    return filterResponses;
 }
 
 // Wrapper to select method

@@ -6,16 +6,20 @@
 #include <string>
 
 // Sequential implementation
-void extractFilterResponsesSequential(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath);
+std::vector<cv::Mat> extractFilterResponsesSequential(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath);
 
 // OpenMP-based implementation
-void extractFilterResponsesOpenMP(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath);
+std::vector<cv::Mat> extractFilterResponsesOpenMP(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath);
 
-// CUDA-specific functions (declarations always visible, definitions guarded)
-void extractFilterResponsesCUDA(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath);
+// CUDA-specific implementation
+std::vector<cv::Mat> extractFilterResponsesCUDA(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath);
 
 #ifdef __CUDACC__
-__global__ void applyFilterKernel(const float* image, const float* filter, float* output, int width, int height, int filterWidth);
+// CUDA Kernel for applying a single filter
+__global__ void applyFilterKernel(const float* image, const float* filter, float* output, 
+                                  int width, int height, int filterWidth);
+
+// CUDA function for applying a set of filters
 void applyFiltersCUDA(const cv::Mat& channel, const std::vector<cv::Mat>& filterBank, std::vector<cv::Mat>& responses);
 #endif
 

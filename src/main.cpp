@@ -1,5 +1,6 @@
 #include "include/filters.h"
 #include "include/createFilterBank.h"
+#include "include/batchToVisualWords.h"
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
@@ -8,15 +9,14 @@
 #include <fstream>
 #include <omp.h>
 
+
 // MAIN FUNCTION TO TEST FILTER EXTRACTION
 
-std::vector<cv::Mat> createFilterBank();
+void test_filtering_implementations() {
 
-int main() {
-
-    std::string inputDir = "../data/Testing/test_elevator"; //change dir name
-    std::string resultsDir = "../results/cuda/test_elevator"; //change dir name
-    std::string csvPath = "../results/cuda/performance_data/performance_elevator.csv"; //change csv name
+    std::string inputDir = "../data/Testing/test_swimming_pool"; //change dir name
+    std::string resultsDir = "../results/cuda/test_swimming_pool"; //change dir name
+    std::string csvPath = "../results/cuda/performance_data/performance_swimming_pool.csv"; //change csv name
 
     std::vector<cv::Mat> filterBank = createFilterBank();
 
@@ -24,10 +24,10 @@ int main() {
     std::ofstream csvFile(csvPath);
     if (!csvFile.is_open()) {
         std::cerr << "Error: Could not open CSV file for writing: " << csvPath << std::endl;
-        return -1;
+        return;
     }
 
-    csvFile << "test_elevator\n"; //change name
+    csvFile << "test_swimming_pool\n"; //change name
     csvFile << "Image,Time (seconds)\n";
 
     auto totalStart = std::chrono::high_resolution_clock::now();
@@ -82,5 +82,32 @@ int main() {
     csvFile.close();
     std::cout << "Performance times written to " << csvPath << std::endl;
 
+}
+
+int test_visual_words() {
+    try {
+        // Paths to required files and directories
+        std::string dictionaryPath = "../kmeans_dictionary.yml"; // Path to dictionary file
+        std::string csvPath = "../traintest.csv";                // Path to CSV file
+        int numCores = 4;                                       // Number of threads to use
+
+        // Start batch processing
+        std::cout << "Starting batch processing of visual words..." << std::endl;
+        batchToVisualWords(numCores, dictionaryPath, csvPath);
+        std::cout << "Visual word processing completed successfully!" << std::endl;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+int main() {
+
+    test_visual_words();
+    
     return 0;
 }
