@@ -17,11 +17,11 @@
     }
 
 // CUDA Kernel
-__global__ void applyFilterKernel(const float* image, const float* filter, float* output, int width, int height, int filterWidth) {
-    extern __shared__ float sharedMemory[]; // Shared memory buffer
-    float* sharedImage = sharedMemory;      // Shared image tile
-    float* sharedFilter = &sharedMemory[(blockDim.x + 2) * (blockDim.y + 2)]; // Shared filter
-    
+__global__ void applyFilterKernel(const float* image, const float* filter, float* output, 
+                                  int width, int height, int filterWidth) {
+    extern __shared__ float sharedMemory[]; // Shared memory buffer for the image tile
+    float* sharedImage = sharedMemory;
+
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -30,32 +30,32 @@ __global__ void applyFilterKernel(const float* image, const float* filter, float
 
     int halfFilter = filterWidth / 2;
 
-    // Load the filter into shared memory
-    if (tx < filterWidth && ty < filterWidth) {
-        sharedFilter[ty * filterWidth + tx] = (tx < filterWidth && ty < filterWidth) ? filter[ty * filterWidth + tx] : 0.0f;
-    }
-
-    // Load the image tile into shared memory (with padding for boundary handling)
+    // Compute shared memory dimensions (including padding for boundaries)
     int sharedWidth = blockDim.x + 2 * halfFilter;
     int sharedHeight = blockDim.y + 2 * halfFilter;
 
+    // Position in shared memory
     int sharedX = tx + halfFilter;
     int sharedY = ty + halfFilter;
 
+    // Load image data into shared memory with boundary handling
     if (x < width && y < height) {
         sharedImage[sharedY * sharedWidth + sharedX] = image[y * width + x];
     } else {
-        sharedImage[sharedY * sharedWidth + sharedX] = 0.0f;
+        // Handle out-of-bounds replication
+        int clampedX = max(0, min(x, width - 1));
+        int clampedY = max(0, min(y, height - 1));
+        sharedImage[sharedY * sharedWidth + sharedX] = image[clampedY * width + clampedX];
     }
 
-    // Handle boundary padding
+    // Handle boundary padding (replication)
     if (tx < halfFilter) {
-        sharedImage[sharedY * sharedWidth + (sharedX - halfFilter)] = (x >= halfFilter) ? image[y * width + (x - halfFilter)] : 0.0f;
-        sharedImage[sharedY * sharedWidth + (sharedX + blockDim.x)] = (x + blockDim.x < width) ? image[y * width + (x + blockDim.x)] : 0.0f;
+        sharedImage[sharedY * sharedWidth + (sharedX - halfFilter)] = (x >= halfFilter) ? image[y * width + (x - halfFilter)] : image[y * width];
+        sharedImage[sharedY * sharedWidth + (sharedX + blockDim.x)] = (x + blockDim.x < width) ? image[y * width + (x + blockDim.x)] : image[y * width + (width - 1)];
     }
     if (ty < halfFilter) {
-        sharedImage[(sharedY - halfFilter) * sharedWidth + sharedX] = (y >= halfFilter) ? image[(y - halfFilter) * width + x] : 0.0f;
-        sharedImage[(sharedY + blockDim.y) * sharedWidth + sharedX] = (y + blockDim.y < height) ? image[(y + blockDim.y) * width + x] : 0.0f;
+        sharedImage[(sharedY - halfFilter) * sharedWidth + sharedX] = (y >= halfFilter) ? image[(y - halfFilter) * width + x] : image[x];
+        sharedImage[(sharedY + blockDim.y) * sharedWidth + sharedX] = (y + blockDim.y < height) ? image[(y + blockDim.y) * width + x] : image[(height - 1) * width + x];
     }
 
     __syncthreads();
@@ -63,12 +63,16 @@ __global__ void applyFilterKernel(const float* image, const float* filter, float
     // Perform convolution
     if (x < width && y < height) {
         float value = 0.0f;
+
+        // Apply filter (flipped kernel)
         for (int fy = -halfFilter; fy <= halfFilter; ++fy) {
             for (int fx = -halfFilter; fx <= halfFilter; ++fx) {
-                value += sharedImage[(sharedY + fy) * sharedWidth + (sharedX + fx)] *
-                         sharedFilter[(fy + halfFilter) * filterWidth + (fx + halfFilter)];
+                int imageIdx = (sharedY + fy) * sharedWidth + (sharedX + fx);
+                int filterIdx = (halfFilter - fy) * filterWidth + (halfFilter - fx); // Flipping the filter
+                value += sharedImage[imageIdx] * filter[filterIdx];
             }
         }
+
         output[y * width + x] = value;
     }
 }
@@ -109,7 +113,7 @@ void applyFiltersCUDA(const cv::Mat& channel, const std::vector<cv::Mat>& filter
 
         CHECK_CUDA_CALL(cudaMemcpy(d_filter, filter32F.ptr<float>(), filterWidth * filterWidth * sizeof(float), cudaMemcpyHostToDevice));
 
-        size_t sharedMemSize = ((blockSize.x + 2) * (blockSize.y + 2) + filterWidth * filterWidth) * sizeof(float);
+        size_t sharedMemSize = ((blockSize.x + 2 * (filterWidth / 2)) * (blockSize.y + 2 * (filterWidth / 2))) * sizeof(float);
         applyFilterKernel<<<gridSize, blockSize, sharedMemSize>>>(d_image, d_filter, d_output, width, height, filterWidth);
         CHECK_CUDA_CALL(cudaDeviceSynchronize());
 
@@ -123,6 +127,7 @@ void applyFiltersCUDA(const cv::Mat& channel, const std::vector<cv::Mat>& filter
     cudaFree(d_filter);
     cudaFree(d_output);
 }
+
 
 void extractFilterResponsesCUDA(const cv::Mat& image, const std::vector<cv::Mat>& filterBank, const std::string& outputPath) {
     if (image.empty()) {

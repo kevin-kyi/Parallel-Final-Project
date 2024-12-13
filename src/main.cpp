@@ -14,9 +14,9 @@ std::vector<cv::Mat> createFilterBank();
 
 int main() {
 
-    std::string inputDir = "../data/Testing/test_airport_terminal"; //change dir name
-    std::string resultsDir = "../results/cuda/test_airport_terminal"; //change dir name
-    std::string csvPath = "../results/cuda/performance_data/performance_airport_terminal.csv"; //change csv name
+    std::string inputDir = "../data/Testing/test_elevator"; //change dir name
+    std::string resultsDir = "../results/cuda/test_elevator"; //change dir name
+    std::string csvPath = "../results/cuda/performance_data/performance_elevator.csv"; //change csv name
 
     std::vector<cv::Mat> filterBank = createFilterBank();
 
@@ -27,10 +27,13 @@ int main() {
         return -1;
     }
 
-    csvFile << "test_airport_terminal\n"; //change name
+    csvFile << "test_elevator\n"; //change name
     csvFile << "Image,Time (seconds)\n";
 
     auto totalStart = std::chrono::high_resolution_clock::now();
+    // Define implementation we want to use ("sequential", "openmp", "cuda")
+    std::string method = "cuda";
+    std::cout << "testing with " << method << " implementation\n";
 
     // Iterate over all files in the input directory
     for (const auto& entry : std::filesystem::directory_iterator(inputDir)) {
@@ -48,9 +51,6 @@ int main() {
             }
 
             std::string imageResultsDir = resultsDir + "/" + entry.path().stem().string();
-
-            // Define method we want to use ("sequential", "openmp", "cuda")
-            std::string method = "cuda";
 
             // Apply filters and save the responses
             try {
