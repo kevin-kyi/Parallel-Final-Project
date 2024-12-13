@@ -1,41 +1,3 @@
-// #include "include/filters.h"
-// #include <opencv2/opencv.hpp>
-// #include <iostream>
-// #include <vector>
-// #include <filesystem>
-
-
-// // MAIN FUNCTION TO TEST FILTER EXTRACTION
-
-// std::vector<cv::Mat> createFilterBank();
-
-// int main() {
-//     // Define the image path and results output folder
-//     std::string imagePath = "data/airport_image1.jpg";
-//     std::string resultsPath = "results";
-
-//     // Load the input image
-//     cv::Mat image = cv::imread(imagePath);
-//     if (image.empty()) {
-//         std::cerr << "Error: Could not open image at " << imagePath << std::endl;
-//         return -1;
-//     }
-
-//     // Create the filter bank
-//     std::vector<cv::Mat> filterBank = createFilterBank();
-
-//     // Apply filters and save the responses
-//     try {
-//         extractAndSaveFilterResponses(image, filterBank, resultsPath);
-//     } catch (const std::exception& e) {
-//         std::cerr << "Error: " << e.what() << std::endl;
-//         return -1;
-//     }
-
-//     std::cout << "Processing completed successfully. Filtered images saved in " << resultsPath << std::endl;
-
-//     return 0;
-// }
 #include "include/filters.h"
 #include "include/createFilterBank.h"
 #include <opencv2/opencv.hpp>
@@ -52,12 +14,10 @@ std::vector<cv::Mat> createFilterBank();
 
 int main() {
 
-    // Define the directory containing images and results output folder
-    std::string inputDir = "../data/Testing/test_swimming_pool"; //change dir name
-    std::string resultsDir = "../results/parallel/test_swimming_pool"; //change dir name
-    std::string csvPath = "../results/parallel/performance_data/performance_swimming_pool.csv"; //change csv name
+    std::string inputDir = "../data/Testing/test_airport_terminal"; //change dir name
+    std::string resultsDir = "../results/cuda/test_airport_terminal"; //change dir name
+    std::string csvPath = "../results/cuda/performance_data/performance_airport_terminal.csv"; //change csv name
 
-    // Create the filter bank
     std::vector<cv::Mat> filterBank = createFilterBank();
 
     // Open the CSV file for writing
@@ -67,37 +27,34 @@ int main() {
         return -1;
     }
 
-    // Write the header for the CSV
-    csvFile << "test_swimming_pool\n"; //change name
+    csvFile << "test_airport_terminal\n"; //change name
     csvFile << "Image,Time (seconds)\n";
 
-    // Measure the total directory processing time
     auto totalStart = std::chrono::high_resolution_clock::now();
 
     // Iterate over all files in the input directory
-    for (const auto& entry : std::__fs::filesystem::directory_iterator(inputDir)) {
+    for (const auto& entry : std::filesystem::directory_iterator(inputDir)) {
         const std::string imagePath = entry.path().string();
 
-        // Ensure the file has a .jpg extension (case-insensitive check)
         if (entry.path().extension() == ".jpg" || entry.path().extension() == ".JPG") {
             // std::cout << "Processing image: " << imagePath << std::endl;
 
-            // Measure the time for processing a single image
             auto imageStart = std::chrono::high_resolution_clock::now();
 
-            // Load the image
             cv::Mat image = cv::imread(imagePath);
             if (image.empty()) {
                 std::cerr << "Error: Could not open image at " << imagePath << std::endl;
                 continue; // Skip to the next file
             }
 
-            // Define the output path for this image
             std::string imageResultsDir = resultsDir + "/" + entry.path().stem().string();
+
+            // Define method we want to use ("sequential", "openmp", "cuda")
+            std::string method = "cuda";
 
             // Apply filters and save the responses
             try {
-                extractAndSaveFilterResponses(image, filterBank, imageResultsDir);
+                extractAndSaveFilterResponses(image, filterBank, imageResultsDir, method);
             } catch (const std::exception& e) {
                 std::cerr << "Error processing image " << imagePath << ": " << e.what() << std::endl;
                 continue; // Skip to the next file
@@ -127,36 +84,3 @@ int main() {
 
     return 0;
 }
-
-
-
-
-// MAIN FUNCTION TO TEST GETHARRISPOINTS
-
-// #include "include/getHarrisPoints.h"
-// #include <iostream>
-// #include <filesystem>
-
-// int main() {
-//     try {
-//         // Load the image
-//         std::string inputPath = "data/campus_image1.jpg";  // Replace with your image path
-//         cv::Mat image = cv::imread(inputPath);
-
-//         // Parameters for Harris detector
-//         int alpha = 500;     // Number of top responses
-//         double k = 0.04;     // Harris constant
-
-//         // Perform Harris corner detection
-//         std::vector<cv::Point> harrisPoints = getHarrisPoints(image, alpha, k);
-
-//         // Save result
-//         std::string outputPath = "results/harris_points_image2.jpg";
-//         saveHarrisPointsImage(image, harrisPoints, outputPath);
-
-//     } catch (const std::exception& e) {
-//         std::cerr << "Error: " << e.what() << std::endl;
-//     }
-
-//     return 0;
-// }

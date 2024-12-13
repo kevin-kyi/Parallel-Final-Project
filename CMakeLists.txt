@@ -1,41 +1,56 @@
-cmake_minimum_required(VERSION 3.10)
-project(ParallelFinalProject)
+cmake_minimum_required(VERSION 3.18)
+project(ParallelFinalProject LANGUAGES CXX CUDA)
+
+# Enable C++17
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Enable CUDA
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_ARCHITECTURES 75) # Adjust for your GPU architecture
 
 # Find OpenCV
 find_package(OpenCV REQUIRED)
-
-# Find OpenMP
-find_package(OpenMP REQUIRED)
-if (OpenMP_FOUND)
-    message(STATUS "OpenMP found")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+if(OpenCV_FOUND)
+    include_directories(${OpenCV_INCLUDE_DIRS})
+    link_directories(${OpenCV_LIBRARY_DIRS})
+else()
+    message(FATAL_ERROR "OpenCV not found. Please install OpenCV and try again.")
 endif()
 
-# Add include directories
-include_directories(${OpenCV_INCLUDE_DIRS})
+# Enable OpenMP
+find_package(OpenMP REQUIRED)
+if(OpenMP_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+else()
+    message(WARNING "OpenMP not found. Building without OpenMP support.")
+endif()
 
-# Specify the executable and source files
-add_executable(main src/main.cpp src/filters.cu src/createFilterBank.cpp)
+# Source files
+set(CPP_SOURCES
+    src/filters.cpp
+    src/createFilterBank.cpp
+)
 
-# Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CUDA_SOURCES
+    src/filters.cu
+)
 
-# Deployment target and compatibility settings
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.15")
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15")
+# Compile filters.cpp into a static library
+add_library(filters_cpu STATIC ${CPP_SOURCES})
+target_include_directories(filters_cpu PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(filters_cpu PRIVATE ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
 
-# Ensure compatibility with the macOS SDK
-set(CMAKE_OSX_SYSROOT "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
+# Compile filters.cu into a static library
+add_library(filters_cuda STATIC ${CUDA_SOURCES})
+target_include_directories(filters_cuda PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(filters_cuda PRIVATE ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
 
-# Suppress `_Float16` warnings if unnecessary
-add_definitions(-D__NO_FLOAT16__)
+# Create the final executable
+add_executable(main src/main.cpp)
+target_include_directories(main PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(main PRIVATE filters_cpu filters_cuda)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES")
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_60 -std=c++17")
-
-
-# Link libraries in a unified command
-target_link_libraries(main PUBLIC ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
+# Debugging and verbose build output
+# set(CMAKE_VERBOSE_MAKEFILE ON)
