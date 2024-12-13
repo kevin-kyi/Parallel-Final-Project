@@ -21,6 +21,7 @@
 
 
 
+
 // cv::Mat get_dictionary(const std::vector<std::string> &imgPaths, int alpha, int K, const std::string &method) {
 //     std::vector<cv::Mat> filterBank = createFilterBank();
 //     int filterCount = (int)filterBank.size();
@@ -28,8 +29,16 @@
 //     int dim = 3 * filterCount;
 //     cv::Mat pixelResponses(totalPoints, dim, CV_32F);
 
+//     for (int r = 0; r < pixelResponses.rows; ++r) {
+//         for (int c = 0; c < pixelResponses.cols; ++c) {
+//             pixelResponses.at<float>(r, c) = 0.0f;
+            
+//         }
+//     }
+
 //     for (size_t i = 0; i < imgPaths.size(); i++) {
 //         std::cout << "-- processing " << i+1 << "/" << imgPaths.size() << std::endl;
+
 //         cv::Mat image = cv::imread("data/" + imgPaths[i]);
 //         if (image.empty()) {
 //             std::cerr << "Error loading image: " << imgPaths[i] << std::endl;
@@ -45,7 +54,9 @@
 
 //         std::vector<cv::Point> points;
 //         if (method == "Harris") {
-//             points = getHarrisPoints(imageRGB, alpha, 0.05);
+//             // points = getHarrisPoints(imageRGB, alpha, 0.05);
+//             points = getHarrisPoints(imageRGB, 500, 0.05);
+
 //         } else {
 //             std::cerr << "Invalid method\n";
 //             return cv::Mat();
@@ -63,37 +74,56 @@
 //             // Extract feature vector at p
 //             const float* pix_ptr = response.ptr<float>(p.y, p.x);
 //             for (int d = 0; d < dim; d++) {
-//                 pixelResponses.at<float>(rowOffset + j, d) = pix_ptr[d];
+//                 // pixelResponses.at<float>(rowOffset + j, d) = pix_ptr[d];
+//                 if (std::isnan(pix_ptr[d]) || std::isinf(pix_ptr[d])) {
+//                     pixelResponses.at<float>(rowOffset + j, d) = 0.0f;
+//                 } else {
+//                     pixelResponses.at<float>(rowOffset + j, d) = pix_ptr[d];
+//                 }
+//             }
+//         }
+//     }
+//     for (int r = 0; r < pixelResponses.rows; ++r) {
+//         for (int c = 0; c < pixelResponses.cols; ++c) {
+//             float val = pixelResponses.at<float>(r, c);
+//             if (std::isnan(val) || std::isinf(val)) {
+//                 std::cerr << "Invalid value detected at (" << r << ", " << c << "): " << val << std::endl;
+//                 // Replace with a default value or remove the row
+//                 pixelResponses.at<float>(r, c) = 0.0f; // Example: set to zero
 //             }
 //         }
 //     }
 
 //     // Run KMeans
 //     cv::Mat labels, centers;
-//     cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 100, 1e-4);
-//     cv::kmeans(pixelResponses, K, labels, criteria, 3, cv::KMEANS_PP_CENTERS, centers);
+//     cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 300, 1e-5);
+//     cv::kmeans(pixelResponses, K, labels, criteria, 10, cv::KMEANS_PP_CENTERS, centers);
 
 //     return centers; // KxD
 // }
 
 
-
 cv::Mat get_dictionary(const std::vector<std::string> &imgPaths, int alpha, int K, const std::string &method) {
     std::vector<cv::Mat> filterBank = createFilterBank();
     int filterCount = (int)filterBank.size();
-    int totalPoints = alpha * (int)imgPaths.size();
     int dim = 3 * filterCount;
-    cv::Mat pixelResponses(totalPoints, dim, CV_32F);
+    int totalPoints = alpha * imgPaths.size();
+
+    if (totalPoints < K) {
+        std::cerr << "Error: Insufficient total points for clustering. Increase alpha or reduce K." << std::endl;
+        return cv::Mat();
+    }
+
+    cv::Mat pixelResponses(totalPoints, dim, CV_32F, cv::Scalar(0));
+    std::vector<std::string> problematicImages;
 
     for (size_t i = 0; i < imgPaths.size(); i++) {
-        std::cout << "-- processing " << i+1 << "/" << imgPaths.size() << std::endl;
+        std::cout << "-- processing " << i + 1 << "/" << imgPaths.size() << std::endl;
+
         cv::Mat image = cv::imread("data/" + imgPaths[i]);
-        
-        std::cout << "data/" + imgPaths[i] << std::endl;
-
-
         if (image.empty()) {
             std::cerr << "Error loading image: " << imgPaths[i] << std::endl;
+            problematicImages.push_back(imgPaths[i]);
             continue;
         }
 
@@ -101,46 +131,57 @@ cv::Mat get_dictionary(const std::vector<std::string> &imgPaths, int alpha, int 
         cv::cvtColor(image, imageRGB, cv::COLOR_BGR2RGB);
 
         cv::Mat response = extractFilterResponses(imageRGB, filterBank);
-        // cv::Mat response = extractAndSaveFilterResponses(imageRGB, filterBank, "");
 
-
-        std::vector<cv::Point> points;
-        if (method == "Harris") {
-            points = getHarrisPoints(imageRGB, alpha, 0.05);
-        } else {
-            std::cerr << "Invalid method\n";
-            return cv::Mat();
+        std::vector<cv::Point> points = getHarrisPoints(imageRGB, alpha, 0.05);
+        if (points.size() < alpha) {
+            std::cerr << "Insufficient Harris points in image: " << imgPaths[i] << std::endl;
+            problematicImages.push_back(imgPaths[i]);
+            continue;
         }
 
-        int rowOffset = (int)i * alpha;
-        int H = response.rows;
-        int W = response.cols;
-        int channels = response.channels();
-        
-        // response expected to be CV_32F with dim channels.
-        // Access pixel data:
+        int rowOffset = i * alpha;
         for (int j = 0; j < alpha; j++) {
             cv::Point p = points[j];
-            // Extract feature vector at p
             const float* pix_ptr = response.ptr<float>(p.y, p.x);
             for (int d = 0; d < dim; d++) {
-                pixelResponses.at<float>(rowOffset + j, d) = pix_ptr[d];
+                float value = pix_ptr[d];
+                if (std::isnan(value) || std::isinf(value)) {
+                    std::cerr << "Invalid value detected in image: " << imgPaths[i] << " at (" << p.y << ", " << p.x << ")\n";
+                    problematicImages.push_back(imgPaths[i]);
+                    break;
+                }
+                pixelResponses.at<float>(rowOffset + j, d) = value;
             }
         }
-
-
     }
 
-    // Run KMeans
+    // Remove duplicates from problematicImages
+    std::sort(problematicImages.begin(), problematicImages.end());
+    problematicImages.erase(std::unique(problematicImages.begin(), problematicImages.end()), problematicImages.end());
+
+    // Print all problematic images
+    if (!problematicImages.empty()) {
+        std::cerr << "Problematic images with invalid values:\n";
+        for (const auto &img : problematicImages) {
+            std::cerr << img << std::endl;
+        }
+    }
+
+    std::cout << "PixelResponses size: " << pixelResponses.rows << " x " << pixelResponses.cols << std::endl;
+    std::cout << "PixelResponses type: " << pixelResponses.type() << " (Expected: " << CV_32F << ")" << std::endl;
+
+
+
     cv::Mat labels, centers;
-    cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 200, 1e-6);
-    cv::kmeans(pixelResponses, K, labels, criteria, 10, cv::KMEANS_PP_CENTERS, centers);
+    cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 500, 1e-4);
+    cv::kmeans(pixelResponses, K, labels, criteria, 20, cv::KMEANS_PP_CENTERS, centers);
 
-    return centers; // KxD
+    std::cout << "Centers dimensions: " << centers.rows << " x " << centers.cols << std::endl;
+    std::cout << "Centers type: " << centers.type() << " (Expected: " << CV_32F << ")" << std::endl;
+
+
+    return centers;  // KxD
 }
-
-
-
 
 
 

@@ -16,36 +16,33 @@
 //     // Split the Lab channels
 //     std::vector<cv::Mat> labChannels(3);
 //     cv::split(labImage, labChannels);
-//     const cv::Mat& L_channel = labChannels[0];
-//     const cv::Mat& a_channel = labChannels[1];
-//     const cv::Mat& b_channel = labChannels[2];
 
-//     // Create a vector to store filter responses
-//     std::vector<cv::Mat> filterResponses;
+//     // Create a vector to store filter responses for each pixel
+//     std::vector<cv::Mat> responseChannels;
 
-//     // Iterate over filters and channels
+//     // Apply each filter to each channel and store the results
 //     for (const auto& filter : filterBank) {
-//         cv::Mat response_L, response_a, response_b;
-
-//         // Apply filter to each channel
-//         cv::filter2D(L_channel, response_L, CV_32F, filter);
-//         cv::filter2D(a_channel, response_a, CV_32F, filter);
-//         cv::filter2D(b_channel, response_b, CV_32F, filter);
-
-//         // Concatenate the responses for the current filter
-//         std::vector<cv::Mat> filterResponseChannels = {response_L, response_a, response_b};
-//         cv::Mat filterResponse;
-//         cv::merge(filterResponseChannels, filterResponse);
-
-//         // Add the filter response to the overall response vector
-//         filterResponses.push_back(filterResponse);
+//         for (const auto& channel : labChannels) {
+//             cv::Mat response;
+//             cv::filter2D(channel, response, CV_32F, filter);
+//             responseChannels.push_back(response);
+//         }
 //     }
 
-//     // Concatenate all filter responses along the depth dimension
-//     cv::Mat allResponses;
-//     cv::merge(filterResponses, allResponses);
+//     // Ensure the correct number of channels
+//     if (responseChannels.size() != 3 * filterBank.size()) {
+//         throw std::runtime_error("Filter responses do not match expected dimensions.");
+//     }
 
-//     return allResponses;
+//     // Combine all responses into a single multi-channel matrix
+//     cv::Mat combinedResponses;
+//     cv::merge(responseChannels, combinedResponses);
+
+//     std::cout << "Extracted Filter Responses: Rows=" << combinedResponses.rows 
+//               << ", Cols=" << combinedResponses.cols 
+//               << ", Channels=" << combinedResponses.channels() << std::endl;
+
+//     return combinedResponses;
 // }
 
 
@@ -58,40 +55,33 @@ cv::Mat extractFilterResponses(const cv::Mat& image, const std::vector<cv::Mat>&
     std::vector<cv::Mat> labChannels(3);
     cv::split(labImage, labChannels);
 
-    // Create a vector to store filter responses for each pixel
-    std::vector<cv::Mat> filterResponses;
+    // Create a vector to store filter responses
+    std::vector<cv::Mat> responseChannels;
 
-    cv::Mat L_channel, a_channel, b_channel;
-
-    // Iterate over filters and channels
+    // Apply each filter to each channel and store the results
     for (const auto& filter : filterBank) {
-        cv::Mat response_L, response_a, response_b;
-
-        L_channel = labChannels[0];
-        a_channel = labChannels[1];
-        b_channel = labChannels[2];
-
-        // Apply filter to each channel
-        cv::filter2D(L_channel, response_L, CV_32F, filter);
-        cv::filter2D(a_channel, response_a, CV_32F, filter);
-        cv::filter2D(b_channel, response_b, CV_32F, filter);
-
-        // Concatenate responses for the current pixel into a single row
-        std::vector<float> pixelResponse = {response_L.at<float>(0, 0), response_a.at<float>(0, 0), response_b.at<float>(0, 0)};
-        cv::Mat pixelResponseMat = cv::Mat(1, pixelResponse.size(), CV_64FC1, &pixelResponse[0]); // Ensure 64FC1 data type
-        filterResponses.push_back(pixelResponseMat);
+        for (const auto& channel : labChannels) {
+            cv::Mat response;
+            cv::filter2D(channel, response, CV_32F, filter); // Ensure CV_32F type
+            responseChannels.push_back(response);
+        }
     }
 
-    // Concatenate all filter responses along the vertical dimension
-    cv::Mat allResponses;
-    cv::vconcat(filterResponses, allResponses);
+    // Combine all responses into a single matrix
+    cv::Mat combinedResponses;
+    cv::merge(responseChannels, combinedResponses); // Combine into a multi-channel matrix
 
-    return allResponses;
+    // Reshape to [rows * cols x numChannels] for use with dictionary
+    int numPixels = labImage.rows * labImage.cols;
+    combinedResponses = combinedResponses.reshape(1, numPixels);
+
+    // Debug output for combined responses
+    std::cout << "Extracted Filter Responses: Rows=" << combinedResponses.rows
+              << ", Cols=" << combinedResponses.cols
+              << ", Type=" << combinedResponses.type() << std::endl;
+
+    return combinedResponses;
 }
-
-
-
-
 
 
 

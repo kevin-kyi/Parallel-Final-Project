@@ -55,10 +55,21 @@ std::vector<cv::Point> getHarrisPoints(const cv::Mat& image, int alpha, double k
     std::partial_sort(indices.begin(), indices.begin() + alpha, indices.end(),
                       [&flatR](int i1, int i2) { return flatR[i1] > flatR[i2]; });
 
+    // for (int i = 0; i < alpha; i++) {
+    //     int idx = indices[i];
+    //     points.emplace_back(idx % R.cols, idx / R.cols);
+    // }
+
     for (int i = 0; i < alpha; i++) {
         int idx = indices[i];
-        points.emplace_back(idx % R.cols, idx / R.cols);
+        cv::Point p(idx % R.cols, idx / R.cols);
+        if (!(p.x >= 0 && p.x < R.cols && p.y >= 0 && p.y < R.rows)) {
+            std::cout << "ERROR OUT OF BOUND IN HARRIS FUNCTION" << std::endl;
+        } else {
+            points.emplace_back(p);
+        }
     }
+        
 
     return points;
 }

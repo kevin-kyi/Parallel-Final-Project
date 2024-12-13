@@ -8,6 +8,7 @@
 
 #include "getHarrisPoints.h"
 #include "filters.h"
+#include "visual_words.h"
 
 
 
