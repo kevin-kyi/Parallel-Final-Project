@@ -4,8 +4,8 @@
 
 std::vector<cv::Mat> createFilterBank() {
     std::vector<cv::Mat> filterBank;
-    // std::vector<double> scales = {1};  // Adjust scales as needed
-    std::vector<double> scales = {1, 2, 4, 8};  // Adjust scales as needed
+    std::vector<double> scales = {1};  // Adjust scales as needed
+    // std::vector<double> scales = {1, 2, 4, 8};  // Adjust scales as needed
 
     for (double scale : scales) {
         int size = 2 * std::ceil(scale * 2.5) + 1;  // Kernel size
