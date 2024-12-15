@@ -3,6 +3,8 @@ import numpy as np
 import os
 import matplotlib
 import matplotlib.pyplot as plt
+from PIL import Image, ImageTk
+
 matplotlib.use('TkAgg')
 
 
@@ -42,6 +44,7 @@ def extract_times():
                 results[impl].append(tup)
             else:
                 raise ValueError(f"'Total' row not found in {csv_path}")
+    print(results)
     return results
 
 def plot_total_execution_times(results):
@@ -95,31 +98,21 @@ def plot_speedups(results):
     plt.tight_layout()
     plt.show()
 
-def plot_execution_trends(results):
-    implementations = list(results.keys())
-    test_sets = [tup[0] for tup in results["Sequential"]]
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for impl in implementations:
-        times = [tup[1] for tup in results[impl]]
-        ax.plot(test_sets, times, marker='o', label=impl)
+# Generate tables for each method
 
-    # Customize chart
-    ax.set_xticks(test_sets)
-    ax.set_xticklabels(test_sets, rotation=45, ha="right")
-    ax.set_ylabel("Total Execution Time (seconds)")
-    ax.set_title("Execution Time Trends Across Test Sets")
-    ax.legend()
 
-    plt.tight_layout()
-    plt.show()
 
 
 performance = extract_times()
 print_performance(performance)
+# plot_table(performance, 'Sequential', '../../figures/sequential_table.png')
+# plot_table(performance, 'OpenMP', '../../figures/openmp_table.png')
+# plot_table(performance, 'CUDA', '../../figures/cuda_table.png')
+
 plot_total_execution_times(performance)
 plot_speedups(performance)
-plot_execution_trends(performance)
+# plot_execution_trends(performance)
 
 
 

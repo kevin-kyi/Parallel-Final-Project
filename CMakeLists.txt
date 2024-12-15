@@ -27,10 +27,19 @@ else()
     message(WARNING "OpenMP not found. Building without OpenMP support.")
 endif()
 
+# Find YAML-CPP
+find_package(yaml-cpp REQUIRED)
+if (yaml-cpp_FOUND)
+    message(STATUS "YAML-CPP found at ${YAML_CPP_LIBRARIES}")
+else()
+    message(FATAL_ERROR "YAML-CPP not found. Please install YAML-CPP and try again.")
+endif()
+
 # Source files
 set(CPP_SOURCES
     src/filters.cpp
     src/createFilterBank.cpp
+    src/batchToVisualWords.cpp
 )
 
 set(CUDA_SOURCES
@@ -40,17 +49,17 @@ set(CUDA_SOURCES
 # Compile filters.cpp into a static library
 add_library(filters_cpu STATIC ${CPP_SOURCES})
 target_include_directories(filters_cpu PRIVATE ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(filters_cpu PRIVATE ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
+target_link_libraries(filters_cpu PRIVATE ${OpenCV_LIBS} yaml-cpp OpenMP::OpenMP_CXX)
 
 # Compile filters.cu into a static library
 add_library(filters_cuda STATIC ${CUDA_SOURCES})
 target_include_directories(filters_cuda PRIVATE ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(filters_cuda PRIVATE ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
+target_link_libraries(filters_cuda PRIVATE ${OpenCV_LIBS} yaml-cpp OpenMP::OpenMP_CXX)
 
 # Create the final executable
 add_executable(main src/main.cpp)
 target_include_directories(main PRIVATE ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(main PRIVATE filters_cpu filters_cuda)
+target_link_libraries(main PRIVATE filters_cpu filters_cuda yaml-cpp)
 
 # Debugging and verbose build output
 # set(CMAKE_VERBOSE_MAKEFILE ON)
