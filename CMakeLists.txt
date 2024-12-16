@@ -40,6 +40,13 @@ set(CPP_SOURCES
     src/filters.cpp
     src/createFilterBank.cpp
     src/batchToVisualWords.cpp
+    src/create_dictionary.cpp
+    src/getHarrisPoints.cpp
+    src/create_word_maps.cpp
+    src/dbscan.cpp
+    src/classification.cpp
+    src/save_dictionary_yml.cpp
+    src/getVisualWords.cpp
 )
 
 set(CUDA_SOURCES
