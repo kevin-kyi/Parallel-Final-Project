@@ -37,12 +37,12 @@ Ensure you have the following dependencies installed:
 
 3. **Generate the Makefiles with CMake**:
    ```bash
-   cmake .. -DCMAKE_BUILD_TYPE=Release
+   cmake ..
    ```
 
 4. **Build the project**:
    ```bash
-   make -j$(nproc)
+   make
    ```
 
 5. **Run the program**:
