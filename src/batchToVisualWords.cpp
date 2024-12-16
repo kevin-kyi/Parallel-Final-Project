@@ -49,6 +49,7 @@ cv::Mat getVisualWords(const cv::Mat& image, const cv::Mat& dictionary, const st
         cv::Mat reshaped = filterResponses[i].reshape(1, rows); // Flatten each filter response
         reshaped.copyTo(combinedResponses.col(i));             // Copy into the combined matrix
     }
+    filterResponses.clear();
     
     // Ensure data type consistency
     // combinedResponses.convertTo(combinedResponses, dictionary.type());
@@ -186,6 +187,8 @@ void processImageToVisualWords(
                 std::cout << yml_path << "FAIL" << std::endl;
                 std::cerr << "Failed to save word map YAML." << std::endl;
             }
+            wordMap.release();
+            normalizedWordMap.release();
         }
     }
 }

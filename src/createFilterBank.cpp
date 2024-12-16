@@ -4,8 +4,8 @@
 
 std::vector<cv::Mat> createFilterBank() {
     std::vector<cv::Mat> filterBank;
-    // std::vector<double> scales = {1, 2, 4, 8, std::sqrt(2) * 8};
-    std::vector<double> scales = {1};
+    std::vector<double> scales = {1, 2, 4};
+    // std::vector<double> scales = {1};
 
 
     for (double scale : scales) {
