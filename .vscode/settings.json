@@ -69,7 +69,16 @@
         "type_traits": "cpp",
         "utility": "cpp",
         "format": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "codecvt": "cpp",
+        "deque": "cpp",
+        "numeric": "cpp",
+        "iomanip": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp",
+        "__nullptr": "cpp",
+        "cinttypes": "cpp"
     },
     "C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json"
 }
