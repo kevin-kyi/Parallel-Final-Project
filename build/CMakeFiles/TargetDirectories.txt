@@ -1,0 +1,3 @@
+/Users/derekkim/Parallel-Final-Project/build/CMakeFiles/main.dir
+/Users/derekkim/Parallel-Final-Project/build/CMakeFiles/edit_cache.dir
+/Users/derekkim/Parallel-Final-Project/build/CMakeFiles/rebuild_cache.dir
